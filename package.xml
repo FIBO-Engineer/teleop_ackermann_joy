@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package>
-  <name>teleop_twist_joy</name>
+  <name>teleop_ackermann_joy</name>
   <version>0.1.3</version>
-  <description>Generic joystick teleop for twist robots.</description>
+  <description>Generic joystick teleop for ackermann robots.</description>
   <maintainer email="mpurvis@clearpathrobotics.com">Mike Purvis</maintainer>
 
   <license>BSD</license>
 
-  <url type="website">http://wiki.ros.org/teleop_twist_joy</url>
+  <url type="website">http://wiki.ros.org/teleop_ackermann_joy</url>
   <author email="mpurvis@clearpathrobotics.com">Mike Purvis</author>
 
   <buildtool_depend>catkin</buildtool_depend>

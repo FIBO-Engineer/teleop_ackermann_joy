@@ -66,4 +66,4 @@ class TestJoyTwist(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    rostest.rosrun('teleop_twist_joy', 'test_joy_twist', TestJoyTwist)
+    rostest.rosrun('teleop_ackermann_joy', 'test_joy_twist', TestJoyTwist)

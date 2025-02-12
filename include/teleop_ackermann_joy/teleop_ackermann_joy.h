@@ -27,22 +27,22 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
 
 namespace ros { class NodeHandle; }
 
-namespace teleop_twist_joy
+namespace teleop_ackermann_joy
 {
 
 /**
  * Class implementing a basic Joy -> Twist translation.
  */
-class TeleopTwistJoy
+class TeleopAckermannJoy
 {
 public:
-  TeleopTwistJoy(ros::NodeHandle* nh, ros::NodeHandle* nh_param);
+  TeleopAckermannJoy(ros::NodeHandle* nh, ros::NodeHandle* nh_param);
 
 private:
   struct Impl;
   Impl* pimpl_;
 };
 
-}  // namespace teleop_twist_joy
+}  // namespace teleop_ackermann_joy
 
 #endif  // TELEOP_TWIST_JOY_TELEOP_TWIST_JOY_H
