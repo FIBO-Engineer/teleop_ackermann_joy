@@ -46,17 +46,18 @@ namespace teleop_ackermann_joy
   void sendCmdVelMsg(const sensor_msgs::Joy::ConstPtr& joy_msg, const std::string& which_map);
 
     ros::Subscriber joy_sub;
-    ros::Publisher cmd_vel_pub;
     ros::Publisher ackermann_vel_pub;
-
+  
+    bool use_two_enable_button;
     int enable_button;
+    int enable_button_complement;
     int enable_turbo_button;
 
-    std::map<std::string, int> axis_linear_map;
-    std::map< std::string, std::map<std::string, double> > scale_linear_map;
+    std::map<std::string, int> axis_speed_map;
+    std::map< std::string, std::map<std::string, double> > axis_speed_map;
 
-    std::map<std::string, int> axis_angular_map;
-    std::map< std::string, std::map<std::string, double> > scale_angular_map;
+    std::map<std::string, int> axis_steering_angle_map;
+    std::map< std::string, std::map<std::string, double> > scale_steering_angle_map;
 
     bool sent_disable_msg;
   };
@@ -70,58 +71,61 @@ TeleopAckermannJoy::TeleopAckermannJoy(ros::NodeHandle* nh, ros::NodeHandle* nh_
   {
     pimpl_ = new Impl;
 
-    pimpl_->cmd_vel_pub = nh->advertise<geometry_msgs::Twist>("cmd_vel", 1, true);
     pimpl_->ackermann_vel_pub = nh->advertise<ackermann_msgs::AckermannDrive>("ackermann_vel", 1, true);
     pimpl_->joy_sub = nh->subscribe<sensor_msgs::Joy>("joy", 1, &TeleopAckermannJoy::Impl::joyCallback, pimpl_);
 
+    nh_param->param<bool>("use_two_enable_button", pimpl_->use_two_enable_button, false);
     nh_param->param<int>("enable_button", pimpl_->enable_button, 0);
+    nh_param->param<int>("enable_button_complement", pimpl_->enable_button_complement, 1);
     nh_param->param<int>("enable_turbo_button", pimpl_->enable_turbo_button, -1);
 
-    if (nh_param->getParam("axis_linear", pimpl_->axis_linear_map))
+    if (nh_param->getParam("axis_speed", pimpl_->axis_speed_map))
     {
-      nh_param->getParam("scale_linear", pimpl_->scale_linear_map["normal"]);
-      nh_param->getParam("scale_linear_turbo", pimpl_->scale_linear_map["turbo"]);
+      nh_param->getParam("scale_speed", pimpl_->axis_speed_map["normal"]);
+      nh_param->getParam("scale_speed_turbo", pimpl_->axis_speed_map["turbo"]);
     }
     else
     {
-      nh_param->param<int>("axis_linear", pimpl_->axis_linear_map["x"], 1);
-      nh_param->param<double>("scale_linear", pimpl_->scale_linear_map["normal"]["x"], 0.5);
-      nh_param->param<double>("scale_linear_turbo", pimpl_->scale_linear_map["turbo"]["x"], 1.0);
+      nh_param->param<int>("axis_speed", pimpl_->axis_speed_map["speed"], 1);
+      nh_param->param<double>("scale_speed", pimpl_->axis_speed_map["normal"]["speed"], 0.5);
+      nh_param->param<double>("scale_speed_turbo", pimpl_->axis_speed_map["turbo"]["speed"], 1.0);
     }
 
-    if (nh_param->getParam("axis_angular", pimpl_->axis_angular_map))
+    if (nh_param->getParam("axis_steering_angle", pimpl_->axis_steering_angle_map))
     {
-      nh_param->getParam("scale_angular", pimpl_->scale_angular_map["normal"]);
-      nh_param->getParam("scale_angular_turbo", pimpl_->scale_angular_map["turbo"]);
+      nh_param->getParam("scale_steering_angle", pimpl_->scale_steering_angle_map["normal"]);
+      nh_param->getParam("scale_steering_angle_turbo", pimpl_->scale_steering_angle_map["turbo"]);
     }
     else
     {
-      nh_param->param<int>("axis_angular", pimpl_->axis_angular_map["yaw"], 0);
-      nh_param->param<double>("scale_angular", pimpl_->scale_angular_map["normal"]["yaw"], 0.5);
-      nh_param->param<double>("scale_angular_turbo",
-                              pimpl_->scale_angular_map["turbo"]["yaw"], pimpl_->scale_angular_map["normal"]["yaw"]);
+      nh_param->param<int>("axis_steering_angle", pimpl_->axis_steering_angle_map["steering_angle"], 0);
+      nh_param->param<double>("scale_steering_angle", pimpl_->scale_steering_angle_map["normal"]["steering_angle"], M_PI/2);
+      nh_param->param<double>("scale_steering_angle_turbo",
+                              pimpl_->scale_steering_angle_map["turbo"]["steering_angle"], pimpl_->scale_steering_angle_map["normal"]["steering_angle"]);
     }
 
     ROS_INFO_NAMED("TeleopAckermannJoy", "Teleop enable button %i.", pimpl_->enable_button);
+    ROS_INFO_COND_NAMED(pimpl_->use_two_enable_button, "TeleopAckermannJoy",
+                        "Complement enable on button %i.", pimpl_->enable_button_complement);
     ROS_INFO_COND_NAMED(pimpl_->enable_turbo_button >= 0, "TeleopAckermannJoy",
                         "Turbo on button %i.", pimpl_->enable_turbo_button);
 
-    for (std::map<std::string, int>::iterator it = pimpl_->axis_linear_map.begin();
-         it != pimpl_->axis_linear_map.end(); ++it)
+    for (std::map<std::string, int>::iterator it = pimpl_->axis_speed_map.begin();
+         it != pimpl_->axis_speed_map.end(); ++it)
     {
-      ROS_INFO_NAMED("TeleopAckermannJoy", "Linear axis %s on %i at scale %f.",
-                     it->first.c_str(), it->second, pimpl_->scale_linear_map["normal"][it->first]);
+      ROS_INFO_NAMED("TeleopAckermannJoy", "Speed axis %s on %i at scale %f.",
+                     it->first.c_str(), it->second, pimpl_->axis_speed_map["normal"][it->first]);
       ROS_INFO_COND_NAMED(pimpl_->enable_turbo_button >= 0, "TeleopAckermannJoy",
-                          "Turbo for linear axis %s is scale %f.", it->first.c_str(), pimpl_->scale_linear_map["turbo"][it->first]);
+                          "Turbo for linear axis %s is scale %f.", it->first.c_str(), pimpl_->axis_speed_map["turbo"][it->first]);
     }
 
-    for (std::map<std::string, int>::iterator it = pimpl_->axis_angular_map.begin();
-         it != pimpl_->axis_angular_map.end(); ++it)
+    for (std::map<std::string, int>::iterator it = pimpl_->axis_steering_angle_map.begin();
+         it != pimpl_->axis_steering_angle_map.end(); ++it)
     {
-      ROS_INFO_NAMED("TeleopAckermannJoy", "Angular axis %s on %i at scale %f.",
-                     it->first.c_str(), it->second, pimpl_->scale_angular_map["normal"][it->first]);
+      ROS_INFO_NAMED("TeleopAckermannJoy", "Steering angle axis %s on %i at scale %f.",
+                     it->first.c_str(), it->second, pimpl_->scale_steering_angle_map["normal"][it->first]);
       ROS_INFO_COND_NAMED(pimpl_->enable_turbo_button >= 0, "TeleopAckermannJoy",
-                          "Turbo for angular axis %s is scale %f.", it->first.c_str(), pimpl_->scale_angular_map["turbo"][it->first]);
+                          "Turbo for angular axis %s is scale %f.", it->first.c_str(), pimpl_->scale_steering_angle_map["turbo"][it->first]);
     }
 
     pimpl_->sent_disable_msg = false;
@@ -143,21 +147,9 @@ double getVal(const sensor_msgs::Joy::ConstPtr& joy_msg, const std::map<std::str
 void TeleopAckermannJoy::Impl::sendCmdVelMsg(const sensor_msgs::Joy::ConstPtr& joy_msg,
                                            const std::string& which_map)
   {
-    // Initializes with zeros by default.
-    geometry_msgs::Twist cmd_vel_msg;
-
-    cmd_vel_msg.linear.x = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "x");
-    cmd_vel_msg.linear.y = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "y");
-    cmd_vel_msg.linear.z = getVal(joy_msg, axis_linear_map, scale_linear_map[which_map], "z");
-    cmd_vel_msg.angular.z = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "yaw");
-    cmd_vel_msg.angular.y = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "pitch");
-    cmd_vel_msg.angular.x = getVal(joy_msg, axis_angular_map, scale_angular_map[which_map], "roll");
-
-    cmd_vel_pub.publish(cmd_vel_msg);
-
     ackermann_msgs::AckermannDrive ackermann_vel_msg;
-    ackermann_vel_msg.speed = cmd_vel_msg.linear.x;
-    ackermann_vel_msg.steering_angle = cmd_vel_msg.angular.z;
+    ackermann_vel_msg.speed = getVal(joy_msg, axis_speed_map, axis_speed_map[which_map], "speed");
+    ackermann_vel_msg.steering_angle = getVal(joy_msg, axis_steering_angle_map, scale_steering_angle_map[which_map], "steering_angle");
 
     ackermann_vel_pub.publish(ackermann_vel_msg);
 
@@ -184,8 +176,6 @@ void TeleopAckermannJoy::Impl::joyCallback(const sensor_msgs::Joy::ConstPtr& joy
       if (!sent_disable_msg)
       {
         // Initializes with zeros by default.
-        geometry_msgs::Twist cmd_vel_msg;
-        cmd_vel_pub.publish(cmd_vel_msg);
         ackermann_msgs::AckermannDrive ackermann_vel_msg;
         ackermann_vel_pub.publish(ackermann_vel_msg);
         sent_disable_msg = true;
