@@ -54,7 +54,7 @@ namespace teleop_ackermann_joy
     int enable_turbo_button;
 
     std::map<std::string, int> axis_speed_map;
-    std::map< std::string, std::map<std::string, double> > axis_speed_map;
+    std::map< std::string, std::map<std::string, double> > scale_speed_map;
 
     std::map<std::string, int> axis_steering_angle_map;
     std::map< std::string, std::map<std::string, double> > scale_steering_angle_map;
@@ -81,14 +81,14 @@ TeleopAckermannJoy::TeleopAckermannJoy(ros::NodeHandle* nh, ros::NodeHandle* nh_
 
     if (nh_param->getParam("axis_speed", pimpl_->axis_speed_map))
     {
-      nh_param->getParam("scale_speed", pimpl_->axis_speed_map["normal"]);
-      nh_param->getParam("scale_speed_turbo", pimpl_->axis_speed_map["turbo"]);
+      nh_param->getParam("scale_speed", pimpl_->scale_speed_map["normal"]);
+      nh_param->getParam("scale_speed_turbo", pimpl_->scale_speed_map["turbo"]);
     }
     else
     {
       nh_param->param<int>("axis_speed", pimpl_->axis_speed_map["speed"], 1);
-      nh_param->param<double>("scale_speed", pimpl_->axis_speed_map["normal"]["speed"], 0.5);
-      nh_param->param<double>("scale_speed_turbo", pimpl_->axis_speed_map["turbo"]["speed"], 1.0);
+      nh_param->param<double>("scale_speed", pimpl_->scale_speed_map["normal"]["speed"], 0.5);
+      nh_param->param<double>("scale_speed_turbo", pimpl_->scale_speed_map["turbo"]["speed"], 1.0);
     }
 
     if (nh_param->getParam("axis_steering_angle", pimpl_->axis_steering_angle_map))
@@ -114,9 +114,9 @@ TeleopAckermannJoy::TeleopAckermannJoy(ros::NodeHandle* nh, ros::NodeHandle* nh_
          it != pimpl_->axis_speed_map.end(); ++it)
     {
       ROS_INFO_NAMED("TeleopAckermannJoy", "Speed axis %s on %i at scale %f.",
-                     it->first.c_str(), it->second, pimpl_->axis_speed_map["normal"][it->first]);
+                     it->first.c_str(), it->second, pimpl_->scale_speed_map["normal"][it->first]);
       ROS_INFO_COND_NAMED(pimpl_->enable_turbo_button >= 0, "TeleopAckermannJoy",
-                          "Turbo for linear axis %s is scale %f.", it->first.c_str(), pimpl_->axis_speed_map["turbo"][it->first]);
+                          "Turbo for linear axis %s is scale %f.", it->first.c_str(), pimpl_->scale_speed_map["turbo"][it->first]);
     }
 
     for (std::map<std::string, int>::iterator it = pimpl_->axis_steering_angle_map.begin();
@@ -148,7 +148,7 @@ void TeleopAckermannJoy::Impl::sendCmdVelMsg(const sensor_msgs::Joy::ConstPtr& j
                                            const std::string& which_map)
   {
     ackermann_msgs::AckermannDrive ackermann_vel_msg;
-    ackermann_vel_msg.speed = getVal(joy_msg, axis_speed_map, axis_speed_map[which_map], "speed");
+    ackermann_vel_msg.speed = getVal(joy_msg, axis_speed_map, scale_speed_map[which_map], "speed");
     ackermann_vel_msg.steering_angle = getVal(joy_msg, axis_steering_angle_map, scale_steering_angle_map[which_map], "steering_angle");
 
     ackermann_vel_pub.publish(ackermann_vel_msg);
