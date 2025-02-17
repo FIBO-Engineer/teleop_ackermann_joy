@@ -99,7 +99,7 @@ TeleopAckermannJoy::TeleopAckermannJoy(ros::NodeHandle* nh, ros::NodeHandle* nh_
     else
     {
       nh_param->param<int>("axis_steering_angle", pimpl_->axis_steering_angle_map["steering_angle"], 0);
-      nh_param->param<double>("scale_steering_angle", pimpl_->scale_steering_angle_map["normal"]["steering_angle"], M_PI/2);
+      nh_param->param<double>("scale_steering_angle", pimpl_->scale_steering_angle_map["normal"]["steering_angle"], M_PI/2 - 1e-6);
       nh_param->param<double>("scale_steering_angle_turbo",
                               pimpl_->scale_steering_angle_map["turbo"]["steering_angle"], pimpl_->scale_steering_angle_map["normal"]["steering_angle"]);
     }
