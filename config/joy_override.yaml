@@ -1,0 +1,7 @@
+axis_speed: 3
+scale_speed: 0.25
+axis_steering_angle: 0
+scale_steering_angle: 1.570795
+enable_button: 7
+enable_button_complement: 6
+use_two_enable_buttons: true

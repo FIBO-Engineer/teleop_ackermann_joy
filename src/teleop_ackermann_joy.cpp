@@ -48,7 +48,7 @@ namespace teleop_ackermann_joy
     ros::Subscriber joy_sub;
     ros::Publisher ackermann_vel_pub;
   
-    bool use_two_enable_button;
+    bool use_two_enable_buttons;
     int enable_button;
     int enable_button_complement;
     int enable_turbo_button;
@@ -74,7 +74,7 @@ TeleopAckermannJoy::TeleopAckermannJoy(ros::NodeHandle* nh, ros::NodeHandle* nh_
     pimpl_->ackermann_vel_pub = nh->advertise<ackermann_msgs::AckermannDrive>("ackermann_vel", 1, true);
     pimpl_->joy_sub = nh->subscribe<sensor_msgs::Joy>("joy", 1, &TeleopAckermannJoy::Impl::joyCallback, pimpl_);
 
-    nh_param->param<bool>("use_two_enable_button", pimpl_->use_two_enable_button, false);
+    nh_param->param<bool>("use_two_enable_buttons", pimpl_->use_two_enable_buttons, false);
     nh_param->param<int>("enable_button", pimpl_->enable_button, 0);
     nh_param->param<int>("enable_button_complement", pimpl_->enable_button_complement, 1);
     nh_param->param<int>("enable_turbo_button", pimpl_->enable_turbo_button, -1);
@@ -105,7 +105,7 @@ TeleopAckermannJoy::TeleopAckermannJoy(ros::NodeHandle* nh, ros::NodeHandle* nh_
     }
 
     ROS_INFO_NAMED("TeleopAckermannJoy", "Teleop enable button %i.", pimpl_->enable_button);
-    ROS_INFO_COND_NAMED(pimpl_->use_two_enable_button, "TeleopAckermannJoy",
+    ROS_INFO_COND_NAMED(pimpl_->use_two_enable_buttons, "TeleopAckermannJoy",
                         "Complement enable on button %i.", pimpl_->enable_button_complement);
     ROS_INFO_COND_NAMED(pimpl_->enable_turbo_button >= 0, "TeleopAckermannJoy",
                         "Turbo on button %i.", pimpl_->enable_turbo_button);
@@ -164,8 +164,8 @@ void TeleopAckermannJoy::Impl::joyCallback(const sensor_msgs::Joy::ConstPtr& joy
     {
       sendCmdVelMsg(joy_msg, "turbo");
     }
-    else if (joy_msg->buttons.size() > enable_button &&
-             joy_msg->buttons[enable_button])
+    else if (joy_msg->buttons.size() > std::max(enable_button, enable_button_complement) &&
+             joy_msg->buttons[enable_button] && (!use_two_enable_buttons || joy_msg->buttons[enable_button_complement]))
     {
       sendCmdVelMsg(joy_msg, "normal");
     }
